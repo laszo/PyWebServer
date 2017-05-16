@@ -1,5 +1,5 @@
 #! -- encoding:utf-8 --
-import base_server
+from base_server import run_server, application
 
 G_content = """
 
@@ -28,8 +28,8 @@ urlspatterns = [
 ]
 
 def test():
-    app = base_server.application(('', 8009), urlspatterns)
-    base_server.run_server(app)
+    app = application(('', 8009), urlspatterns)
+    run_server(app)
 
 if __name__ == '__main__':
     test()

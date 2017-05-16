@@ -6,7 +6,7 @@ class application(object):
         self.address = address
         self.urlspatterns = urlps
 
-    def handle(self, url):
+    def process(self, url):
         for u, f in self.urlspatterns:
             ok, m = match(u, url)
             if ok:

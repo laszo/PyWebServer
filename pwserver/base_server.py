@@ -2,7 +2,6 @@ import socket
 import select
 import threading
 from pw_framework import application
-import BaseHTTPServer
 
 MAX_READS = 65537
 G_response = 'HTTP/1.0 200 OK'
@@ -33,7 +32,7 @@ def run_server(app):
 def handle(request, app):
     raw = request.recv(MAX_READS)
     url = parser(raw)
-    result = app.handle(url)
+    result = app.process(url)
     if result:
         request.send(G_response + result)
     else:
