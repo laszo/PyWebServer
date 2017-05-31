@@ -28,7 +28,7 @@ urlspatterns = [
 ]
 
 def test():
-    app = application(('', 8009), urlspatterns)
+    app = application(('', 9001), urlspatterns)
     run_server(app)
 
 if __name__ == '__main__':
