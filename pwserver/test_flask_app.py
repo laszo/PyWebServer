@@ -8,7 +8,7 @@ def flask():
     def hello_world():
         return 'Hello, flask World!'
 
-    s = BaseServer(('127.0.0.1', 8096), app)
+    s = BaseServer(('127.0.0.1', 8097), app)
     s.run_server()
 
 if __name__ == '__main__':

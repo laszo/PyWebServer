@@ -57,6 +57,7 @@ class BaseServer(object):
         self.raw_request = request.recv(self.MAX_READS)
         self.wfile = request.makefile('wb', -1)
         environ = self.config_wsgi_environ()
+        self.headers = list()
         result = app(environ, self.start_response)
         self.write_headers()
         for res in result:
