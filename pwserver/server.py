@@ -26,7 +26,8 @@ class BaseServer(object):
             self.socket.listen(5)
 
             host, port = self.socket.getsockname()[:2]
-            self.server_name = socket.getfqdn(host)
+            # self.server_name = socket.getfqdn(host)
+            self.server_name = host
             self.server_port = port
 
             print 'Server listen at %s:%s' % (self.server_name, str(self.server_port))
@@ -87,7 +88,7 @@ class BaseServer(object):
         # environ['SERVER_PROTOCOL'] = 'HTTP/1.0'
 
         environ['wsgi.url_scheme'] = 'http'
-        # environ['wsgi.input']        = sys.stdin.buffer
+        environ['wsgi.input'] = sys.stdin
         environ['wsgi.errors'] = sys.stderr
         environ['wsgi.version'] = (1, 0)
         environ['wsgi.multithread'] = False
