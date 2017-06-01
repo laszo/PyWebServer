@@ -61,11 +61,14 @@ class BaseServer(object):
         self.headers = list()
         result = app(environ, self.start_response)
         self.write_headers()
+        self.send_response(result)
+        request.close()
+
+    def send_response(self, result):
         for res in result:
             self._write(res)
         self.wfile.flush()
         self.wfile.close()
-        request.close()
 
     def write_headers(self):
         if not self.status.startswith('HTTP'):
