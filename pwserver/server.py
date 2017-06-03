@@ -10,11 +10,14 @@ class BaseServer(object):
 
     MAX_READS = 65537
 
-    def __init__(self, address, handlercls=handler.handler, wsgiapp=None):
+    def __init__(self, address, wsgiapp, handlercls=handler.handler):
         self.socket = socket.socket()
         self.address = address
         self.handlercls = handlercls
         self.wsgiapp = wsgiapp
+        self.server_name = None
+        self.server_port = None
+        self.base_environ = {}
 
     def run_server(self):
         try:
@@ -22,9 +25,10 @@ class BaseServer(object):
             self.socket.listen(5)
 
             host, port = self.socket.getsockname()[:2]
-            # self.server_name = socket.getfqdn(host)
-            self.server_name = host
+            self.server_name = socket.getfqdn(host)
             self.server_port = port
+
+            self.setup_environ()
 
             print 'Server listen at %s:%s' % (self.server_name, str(self.server_port))
         except socket.error as error:
@@ -39,6 +43,16 @@ class BaseServer(object):
         finally:
             self.colse_server()
 
+    def setup_environ(self):
+        # Set up base environment
+        env = self.base_environ = dict(os.environ.items()).copy()
+        env['SERVER_NAME'] = self.server_name
+        env['GATEWAY_INTERFACE'] = 'CGI/1.1'
+        env['SERVER_PORT'] = str(self.server_port)
+        env['REMOTE_HOST']=''
+        env['CONTENT_LENGTH']=''
+        env['SCRIPT_NAME'] = ''
+
     def waiting_request(self):
         print 'Waiting request...'
         while True:
@@ -52,8 +66,8 @@ class BaseServer(object):
 
     def handle_request(self, c):
         if self.handlercls:
-            handler = self.handlercls(c)
-            handler.handle()
+            hdler = self.handlercls(c, self.wsgiapp, self.base_environ.copy())
+            hdler.handle()
 
     def colse_server(self):
         print 'Server is about to close...'

@@ -4,7 +4,7 @@ import sys
 class handler(object):
     MAX_READS = 65537
 
-    def __init__(self, request, wsgi_app):
+    def __init__(self, request, wsgi_app, env):
         self.request = request
         self.wsgi_app = wsgi_app
         self.wfile = None
@@ -14,12 +14,17 @@ class handler(object):
         self.server_port = None
         self.status = None
         self.headers = list()
+        self.environ = env.copy()
+        self.request_protocal = None
+        self.request_path = None
+        self.request_method = None
+        self.request_string = None
 
     def handle(self):
         self.raw_request = self.request.recv(self.MAX_READS)
         self.wfile = self.request.makefile('wb', -1)
-        self.config_wsgi_environ()
         self.paser_request()
+        self.config_wsgi_environ()
         self.headers = list()
         result = self.wsgi_app(self.environ, self.start_response)
         self.write_headers()
@@ -30,8 +35,14 @@ class handler(object):
         lines = self.raw_request.split('\r\n')
         first = lines[0]
         words = first.split()
-        if len(words) > 1:
-            return words[1]
+        if len(words) == 3:
+            self.request_method = words[0]
+            self.request_path = words[1]
+            if '?' in self.request_path:
+                self.request_path, self.request_string = self.request_path.split('?', 1)
+            else:
+                self.request_string = ''
+            self.request_protocal = words[2]
 
     def send_response(self, result):
         for res in result:
@@ -48,16 +59,14 @@ class handler(object):
         self._write('\r\n')
 
     def config_wsgi_environ(self):
-        environ = dict(os.environ.items()).copy()
-        environ['REQUEST_METHOD'] = 'GET'
+        environ = self.environ
+        environ['SERVER_PROTOCOL'] = 'HTTP/1.0'
+        environ['REQUEST_METHOD'] = self.request_method
+        environ['PATH_INFO'] = self.request_path
+        environ['QUERY_STRING'] = self.request_string
         # environ['SCRIPT_NAME'] = ''
-        environ['QUERY_STRING'] = '121212'
         # environ['CONTENT_TYPE'] = ''
         # environ['CONTENT_LENGTH'] = ''
-        environ['PATH_INFO'] = '/'
-        environ['SERVER_NAME'] = self.server_name
-        environ['SERVER_PORT'] = str(self.server_port)
-        # environ['SERVER_PROTOCOL'] = 'HTTP/1.0'
 
         environ['wsgi.url_scheme'] = 'http'
         environ['wsgi.input'] = sys.stdin
@@ -66,7 +75,6 @@ class handler(object):
         environ['wsgi.multithread'] = False
         environ['wsgi.multiprocess'] = True
         environ['wsgi.run_once'] = True
-        self.environ = environ
 
     def start_response(self, status, headers):
         self.status = status
