@@ -4,21 +4,17 @@ import select
 import threading
 import os
 import sys
+import handler
 
 class BaseServer(object):
 
     MAX_READS = 65537
 
-    def __init__(self, address, wsgi_app):
+    def __init__(self, address, handlercls=handler.handler, wsgiapp=None):
         self.socket = socket.socket()
         self.address = address
-        self.wsgi_app = wsgi_app
-        self.wfile = None
-        self.raw_request = None
-        self.server_name = None
-        self.server_port = None
-        self.status = None
-        self.headers = list()
+        self.handlercls = handlercls
+        self.wsgiapp = wsgiapp
 
     def run_server(self):
         try:
@@ -50,63 +46,14 @@ class BaseServer(object):
             for r in rl:
                 c, a = r.accept()
                 print 'Get request at %s:%s' % c.getsockname()[:2]
-                self.handle(c, self.wsgi_app)
+                self.handle_request(c)
                 # t = threading.Thread(target=self.handle, args=(c, self.wsgi_app, ))
                 # t.start()
 
-    def handle(self, request, app):
-        self.raw_request = request.recv(self.MAX_READS)
-        self.wfile = request.makefile('wb', -1)
-        environ = self.config_wsgi_environ()
-        self.headers = list()
-        result = app(environ, self.start_response)
-        self.write_headers()
-        self.send_response(result)
-        request.close()
-
-    def send_response(self, result):
-        for res in result:
-            self._write(res)
-        self.wfile.flush()
-        self.wfile.close()
-
-    def write_headers(self):
-        if not self.status.startswith('HTTP'):
-            self.status = 'HTTP/1.0 ' + self.status
-        self._write(self.status + '\r\n')
-        for keyword, value in self.headers:
-            self._write("%s: %s\r\n" % (keyword, value))
-        self._write('\r\n')
-
-    def config_wsgi_environ(self):
-        environ = dict(os.environ.items()).copy()
-        environ['REQUEST_METHOD'] = 'GET'
-        # environ['SCRIPT_NAME'] = ''
-        environ['QUERY_STRING'] = '121212'
-        # environ['CONTENT_TYPE'] = ''
-        # environ['CONTENT_LENGTH'] = ''
-        environ['PATH_INFO'] = '/'
-        environ['SERVER_NAME'] = self.server_name
-        environ['SERVER_PORT'] = str(self.server_port)
-        # environ['SERVER_PROTOCOL'] = 'HTTP/1.0'
-
-        environ['wsgi.url_scheme'] = 'http'
-        environ['wsgi.input'] = sys.stdin
-        environ['wsgi.errors'] = sys.stderr
-        environ['wsgi.version'] = (1, 0)
-        environ['wsgi.multithread'] = False
-        environ['wsgi.multiprocess'] = True
-        environ['wsgi.run_once'] = True
-        return environ
-
-    def start_response(self, status, headers):
-        self.status = status
-        for h in headers:
-            self.headers.append(h)
-        return self._write
-
-    def _write(self, data):
-        self.wfile.write(data)
+    def handle_request(self, c):
+        if self.handlercls:
+            handler = self.handlercls(c)
+            handler.handle()
 
     def colse_server(self):
         print 'Server is about to close...'
