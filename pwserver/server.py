@@ -10,6 +10,7 @@ class BaseServer(object):
 
     MAX_READS = 65537
 
+    # todo 读取配置文件，或者指定配置项，包括几个工作进程，运行哪些server等，给进程起名字，便于管理
     def __init__(self, address, wsgiapp, handlercls=handler.handler):
         self.socket = socket.socket()
         self.address = address
