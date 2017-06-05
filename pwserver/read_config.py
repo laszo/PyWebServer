@@ -1,3 +1,5 @@
+#! --encoding:utf8--
+
 import re
 
 pattern = '\w\s*\{.*\}';
@@ -9,44 +11,39 @@ def foo(fn):
         line = i.strip()
         if not line.startswith('#'):
             if not line == '':
-                yield line
+                line = line.replace('{', '{\n')
+                line = line.replace(';', ';\n')
+                line = line.replace('}', '\n}\n')
+                for j in line.split('\n'):
+                    if len(j) > 0:
+                        yield j
     f.close()
 
-def foo2(fn):
-    for line in foo(fn):
-        for i in line.split('}'):
-            if i:
-                yield ' '.join(i+'}'.split())
-
-        # line = line.replace('{', ' {')
-        # line = line.replace('}', ' }')
-        # yield ' '.join(line.split())
-
-def split(line, char):
-    for i in line.split('}'):
-        yield i + '}'
-
-patd = r'(?P<directive>\w+(\s+\w+)+;)'
-patc = r'(?P<context>\w+\s+\{.*\})';
-compd = re.compile(patd)
-compc = re.compile(patc)
-
-
-bar = '\n'.join([i for i in foo('config.conf')])
-
-# 彻底晕菜了！
-for i in bar:
-    print [split(i, '}')]
-
-# print bar
+# outfile = open('out.conf', 'wt')
+# for i in foo('config.conf'):
+#     outfile.write(i)
+# outfile.flush()
+# outfile.close()
 
 import tools
 
-main_context = tools.block()
 
-# for i in foo('config.conf'):
-#     main_context.push(i)
+def main():
+    main_context = tools.block()
+    for i in foo('out.conf'):
+        main_context.push(i)
+    print main_context
+    for i in main_context.find('http.include'):
+        print i
+    print '-------------------------------------'
+    for i in main_context.find('http.server.listen'):
+        print i
+    print '-------------------------------------'
+    for i in main_context.find('http.server'):
+        for j in i.find('location'):
+            print j
+        for j in i.find('listen'):
+            print j
 
-# for i in main_context.directives:
-#     print i
-
+if __name__ == '__main__':
+    main()

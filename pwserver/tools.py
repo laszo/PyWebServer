@@ -1,13 +1,21 @@
 #! --encoding:utf8--
 
+import StringIO
 
 class block(object):
-    def __init__(self):
+    def __init__(self, line=None, prefix=""):
+        self.prefix = prefix
         self.directives = list()
         self.blocks = list()
-        self.lines = list()
         self.last_block = None
-        self._open = False
+        self._open = True
+        self._finder = None
+        if line:
+            self.name = line.replace('{', '').strip()
+            self.command = self.name.split()[0]
+        else:
+            self.name = 'main'
+            self.command = 'main'
 
     def check_open(self):
         if self.last_block:
@@ -15,39 +23,57 @@ class block(object):
         return self._open
 
     def push(self, line):
-        if line.endswith('}'):
-            if self.last_block():
-                self.last_block.push(line)
-                self.check_open()
-            else:
-                # 在这里，关闭本机的open
-                self._open = False
-
-        elif line.endswith('{'): # { 之前应该还有指令名称，不应该仅仅以 { 开头判断block的开始
-            if self.last_block:
-                self.last_block.push(line)
-            else:
-                self.last_block = block()
-                self.blocks.append(self.last_block)
-
-                # 这边比较乱，应该拿个笔画一下
-
-        elif line.endswith(';'):
+        if line.endswith(';'):
             if self.last_block:
                 self.last_block.push(line)
             else:
                 self.directives.append(line)
-            # lvxiaoyu 搞到这个函数了，只要判断好几个状态即可，先吃饭吧
+        elif line.endswith('{'):
+            if self.last_block:
+                self.last_block.push(line)
+            else:
+                self.last_block = block(line=line, prefix=self.prefix+'\t')
+                self.blocks.append(self.last_block)
+        elif line.endswith('}'):
+            if self.last_block:
+                self.last_block.push(line)
+                if not self.last_block.check_open():
+                    self.last_block = None
+            else:
+                self._open = False
 
+    def printfoo(self, f):
+        print >>f, self.prefix + self.name
+        for i in self.directives:
+            print >>f, self.prefix + '\t' + i
+        for i in self.blocks:
+            i.printfoo(f)
+        return f.getvalue()
 
-    def pop(self):
-        if self.lines.count() > 0:
-            last = self.lines[-1]
-            self.lines.remove(last)
-            return last
-        else:
-            return None
+    def find(self, path):
+        foo = path.split('.')
+        if len(foo) > 0:
+            if foo[0] != self.command:
+                foo.insert(0, self.command)
+            for i in self.__subc(foo):
+                yield i
 
+    def __subc(self, paths):
+        if len(paths) > 0:
+            if self.command == paths[0]:
+                if len(paths) == 1:
+                    yield self
+                else:
+                    for blk in self.blocks:
+                        if blk.command == paths[1]:
+                            for i in blk.__subc(paths[1:]):
+                                yield i
+                    for dect in self.directives:
+                        if dect.startswith(paths[1]):
+                            yield dect
 
-
-
+    def __str__(self):
+        f = StringIO.StringIO()
+        foo = self.printfoo(f)
+        f.close()
+        return foo
