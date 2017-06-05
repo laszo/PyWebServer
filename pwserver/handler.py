@@ -1,5 +1,7 @@
 import os
 import sys
+import shutil
+from RequestType import rtype
 
 class handler(object):
     MAX_READS = 65537
@@ -19,17 +21,16 @@ class handler(object):
         self.request_path = None
         self.request_method = None
         self.request_string = None
+        self.request_type = rtype.STATIC_FILE
 
     def handle(self):
         self.raw_request = self.request.recv(self.MAX_READS)
         self.wfile = self.request.makefile('wb', -1)
-        self.paser_request()
-        self.config_wsgi_environ()
-        self.headers = list()
-        result = self.wsgi_app(self.environ, self.start_response)
-        self.write_headers()
-        self.send_response(result)
-        self.request.close()
+        if self.paser_request():
+            self.handle_requst()
+            self.close_request()
+        else:
+            self.send_error()
 
     def paser_request(self):
         lines = self.raw_request.split('\r\n')
@@ -43,6 +44,29 @@ class handler(object):
             else:
                 self.request_string = ''
             self.request_protocal = words[2]
+        elif len(words) == 2:
+            pass
+        else:
+            return False
+        return self.det_request_type()
+
+    def det_request_type(self):
+        if not self.request_path:
+            return False
+
+
+    def handle_requst(self):
+        pass
+
+    def wsgi_requst(self):
+        self.config_wsgi_environ()
+        self.headers = list()
+        result = self.wsgi_app(self.environ, self.start_response)
+        self.write_headers()
+        self.send_response(result)
+
+    def send_error(self):
+        self.close_request()
 
     def send_response(self, result):
         for res in result:
@@ -84,3 +108,8 @@ class handler(object):
 
     def _write(self, data):
         self.wfile.write(data)
+
+    def close_request(self):
+        self.request.close()
+
+
