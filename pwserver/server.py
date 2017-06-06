@@ -28,9 +28,6 @@ def runwsgi(address, wsgiapp):
     server = BaseServer(address, wsgiapp)
     server.run_server()
 
-def error(message):
-    print message
-    raise Exception
 
 class BaseServer(object):
 
@@ -43,16 +40,15 @@ class BaseServer(object):
         self.wsgiapp = wsgiapp
         self.address = address
         self.handlercls = handlercls
-        self.server_root = None
         if address and wsgiapp:
             self.handlercls = handler.WSGIHandler
         elif config:
             self.config = config
-            self.handlercls = handler.StaticFileHandler
+            self.handlercls = handler.ConfigFileHandler
             self.locations = list()
             self.read_config(config)
         else:
-            error('can not do nothing')
+            t.error('can not do nothing')
         self.base_environ = None
         self.socket = socket.socket()
         self.activate_server()
@@ -60,7 +56,7 @@ class BaseServer(object):
     def read_config(self, config):
         listens = [i for i in config.find('listen')]
         if not listens:
-            error('no port given')
+            t.error('no port given')
         port = listens[0].replace(';', '').split()[1]
         self.address = ('', int(port))
         print 'server port:%s' % port
@@ -68,13 +64,6 @@ class BaseServer(object):
         if names:
             self.server_name = names[0]
             print self.server_name
-        locations = [i for i in config.find('location')]
-        if not locations:
-            error('no location to serve')
-        self.locations = locations
-        roots = [i for i in config.find('root')]
-        if roots:
-            self.server_root = roots[0]
 
     def activate_server(self):
         try:
@@ -113,10 +102,8 @@ class BaseServer(object):
             rdl, wrl, erl = select.select([self.socket], [], [])
             for req in rdl:
                 conn, add = req.accept()
-                print 'Get request at %s:%s' % conn.getsockname()[:2]
-                print 'Client address:%s' % add[0]
                 self.handle_request(conn)
-                # t = threading.Thread(target=self.handle, args=(c, self.wsgi_app, ))
+                # t = threading.Thread(target=self.handle, args=(c, ))
                 # t.start()
 
     def handle_request(self, c):
@@ -125,8 +112,7 @@ class BaseServer(object):
                 hdler = self.handlercls(c, self.wsgiapp, self.base_environ.copy())
                 hdler.handle()
             elif self.config:
-                hdler = self.handlercls(c, self.locations, self.server_root,
-                                        self.base_environ.copy())
+                hdler = self.handlercls(c, self.config, self.base_environ.copy())
                 hdler.handle()
 
     def colse_server(self):

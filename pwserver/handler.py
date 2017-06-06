@@ -1,5 +1,5 @@
 import sys
-import re
+import shutil
 import os.path
 from pwserver.RequestType import rtype
 
@@ -9,7 +9,7 @@ class BaseHandler(object):
     def __init__(self, request, env):
         self.request = request
         self.env = env
-        self.wfile = None
+        self.wfile = self.request.makefile('wb', -1)
         self.raw_request = None
         self.server_name = None
         self.server_port = None
@@ -23,7 +23,6 @@ class BaseHandler(object):
 
     def handle(self):
         self.raw_request = self.request.recv(self.MAX_READS)
-        self.wfile = self.request.makefile('wb', -1)
         if self.paser_request():
             self.handle_requst()
             self.close_request()
@@ -60,19 +59,22 @@ class BaseHandler(object):
         self.wfile.flush()
         self.wfile.close()
 
-    def write_headers(self):
-        if not self.status.startswith('HTTP'):
-            self.status = 'HTTP/1.0 ' + self.status
-        self._write(self.status + '\r\n')
-        for keyword, value in self.headers:
-            self._write("%s: %s\r\n" % (keyword, value))
-        self._write('\r\n')
-
     def start_response(self, status, headers):
         self.status = status
         for header in headers:
             self.headers.append(header)
         return self._write
+
+    def write_headers(self):
+        if not self.status.startswith('HTTP'):
+            self.status = 'HTTP/1.0 ' + self.status
+        self._write(self.status + '\r\n')
+        for keyword, value in self.headers:
+            self.send_header(keyword, value)
+        self._write('\r\n')
+
+    def send_header(self, keyword, value):
+        self._write("%s: %s\r\n" % (keyword, value))
 
     def _write(self, data):
         self.wfile.write(data)
@@ -80,51 +82,77 @@ class BaseHandler(object):
     def close_request(self):
         self.request.close()
 
-class StaticFileHandler(BaseHandler):
+G_RESPONSE = 'HTTP/1.0 200 OK\n'
+DEFAULT_ROOT = '/usr/local/var/www/'
+if os.name == 'nt':
+    DEFAULT_ROOT = 'C:\\nginx-1.13.0\\html'
+PASS_ARGS = ['proxy_pass', 'fastcgi_pass', 'uwsgi_pass', 'scgi_pass', 'memcached_pass']
 
-    G_response = 'HTTP/1.0 200 OK\n'
+def parser(line):
+    if line:
+        return line.replace(';', '').split()[-1]
 
-    def __init__(self, request, locations, root, env):
+class ConfigFileHandler(BaseHandler):
+
+    def __init__(self, request, config, env):
         BaseHandler.__init__(self, request, env)
-        self.locations = locations
         self.request_type = rtype.WSGI
+        self.root = parser(config.subd('root'))
         self.patterns = list()
-        if root:
-            self.root = root
-        else:
-            self.root = '/usr/local/var/www'
-        for loc in self.locations:
+
+        for loc in config.find('location'):
             if loc.args:
                 if loc.args[0] in '= | ~ | ~* | ^~':
-                    pat = re.compile(loc.args[1])
+                    patt = loc.args[1]
                 else:
-                    pat = re.compile(loc.args[0])
-                self.patterns.append((pat, loc))
+                    patt = loc.args[0]
+                root = parser(loc.subd('root'))
+                if root:
+                    if root == 'html':
+                        root = DEFAULT_ROOT
+                    self.patterns.append((patt, FileHelper(root, self.wfile)))
+                else:
+                    for pasarg in PASS_ARGS:
+                        targ = parser(loc.subd(pasarg))
+                        print 'pass: ', targ
 
     def handle_requst(self):
-        if self.request_path == '/':
-            self.request_path = '/index.html'
-        print 'request: ', self.request_path
-        pass_args = ['proxy_pass', 'fastcgi_pass', 'uwsgi_pass', 'scgi_pass', 'memcached_pass']
-        for pat, loc in self.patterns:
-            if pat.match(self.request_path):
-                for root in loc.find('root'):
-                    print 'root: %s' % root
-                    self._write(self.G_response)
-                    ft1 = root.replace(';', '').split()[-1]
-                    pt1 = os.path.join(self.root, ft1)
-                    fpath = os.path.join(pt1, self.request_path)
-                    res = self.get_file('/usr/local/var/www/index.html')
-                    self.send_response(res)
-                    return
+        mostmatch = 0
+        helper = None
+        for pat, hlpr in self.patterns:
+            if self.request_path.startswith(pat):
+                if len(pat) > mostmatch:
+                    mostmatch = len(pat)
+                    helper = hlpr
+        if helper:
+            request = self.request_path.replace('/', '')
+            if not request:
+                request = 'index.html'
+            helper.handle(request)
 
-    def get_file(self, fpath):
-        print 'reading: ', fpath
-        tfile = open(fpath)
-        boo = tfile.read()
-        tfile.close()
-        return boo
+class FileHelper(object):
+    def __init__(self, root, wfile):
+        self.root = root
+        self.wfile = wfile
 
+    def handle(self, rpath):
+        self.wfile.write(G_RESPONSE)
+        fpath = os.path.join(self.root, rpath)
+        self.send_file(fpath)
+
+    def send_file(self, fpath):
+        if not os.path.exists(fpath):
+            return
+        print 'sending: ', fpath
+        with open(fpath) as tfile:
+            shutil.copyfileobj(tfile, self.wfile)
+        self.wfile.flush()
+        self.wfile.close()
+
+class PassHelper(object):
+    def handle(self, fpath):
+        pass
+        # self.wfile.write(G_RESPONSE)
 
 class WSGIHandler(BaseHandler):
     def __init__(self, request, wsgi_app, env):

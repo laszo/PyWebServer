@@ -61,6 +61,11 @@ class block(object):
             for i in self.subc(subp):
                 yield i
 
+    def subd(self, direct):
+        for ddr in self.directives:
+            if ddr.startswith(direct):
+                return ddr
+
     def subc(self, paths):
         if not paths:
             return
@@ -109,3 +114,8 @@ def read_lines(fn):
                     if len(j) > 0:
                         yield j
     f.close()
+
+
+def error(msg):
+    print 'Error: %s' % msg
+    raise Exception
