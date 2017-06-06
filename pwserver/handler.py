@@ -1,5 +1,6 @@
 import sys
 import re
+import os.path
 from pwserver.RequestType import rtype
 
 class BaseHandler(object):
@@ -88,7 +89,10 @@ class StaticFileHandler(BaseHandler):
         self.locations = locations
         self.request_type = rtype.WSGI
         self.patterns = list()
-        self.root = root
+        if root:
+            self.root = root
+        else:
+            self.root = '/usr/local/var/www'
         for loc in self.locations:
             if loc.args:
                 if loc.args[0] in '= | ~ | ~* | ^~':
@@ -98,19 +102,25 @@ class StaticFileHandler(BaseHandler):
                 self.patterns.append((pat, loc))
 
     def handle_requst(self):
+        if self.request_path == '/':
+            self.request_path = '/index.html'
         print 'request: ', self.request_path
         pass_args = ['proxy_pass', 'fastcgi_pass', 'uwsgi_pass', 'scgi_pass', 'memcached_pass']
         for pat, loc in self.patterns:
             if pat.match(self.request_path):
-                for i in loc.find('root'):
+                for root in loc.find('root'):
+                    print 'root: %s' % root
                     self._write(self.G_response)
-                    res = self.get_file(i.replace(';', '').split()[-1])
+                    ft1 = root.replace(';', '').split()[-1]
+                    pt1 = os.path.join(self.root, ft1)
+                    fpath = os.path.join(pt1, self.request_path)
+                    res = self.get_file('/usr/local/var/www/index.html')
                     self.send_response(res)
                     return
 
-    def get_file(self, path):
-        print 'reading file: ', self.root + path
-        tfile = open(self.root + path)
+    def get_file(self, fpath):
+        print 'reading: ', fpath
+        tfile = open(fpath)
         boo = tfile.read()
         tfile.close()
         return boo
