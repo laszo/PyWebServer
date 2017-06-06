@@ -10,9 +10,12 @@ class block(object):
         self.last_block = None
         self._open = True
         self._finder = None
+        self.args = None
         if line:
             self.name = line.replace('{', '').strip()
-            self.command = self.name.split()[0]
+            words = self.name.split()
+            self.command = words[0]
+            self.args = words[1:]
         else:
             self.name = 'main'
             self.command = 'main'
@@ -51,29 +54,58 @@ class block(object):
         return f.getvalue()
 
     def find(self, path):
-        foo = path.split('.')
-        if len(foo) > 0:
-            if foo[0] != self.command:
-                foo.insert(0, self.command)
-            for i in self.__subc(foo):
+        subp = path.split('.')
+        if subp:
+            if subp[0] != self.command:
+                subp.insert(0, self.command)
+            for i in self.subc(subp):
                 yield i
 
-    def __subc(self, paths):
-        if len(paths) > 0:
-            if self.command == paths[0]:
-                if len(paths) == 1:
-                    yield self
-                else:
-                    for blk in self.blocks:
-                        if blk.command == paths[1]:
-                            for i in blk.__subc(paths[1:]):
-                                yield i
-                    for dect in self.directives:
-                        if dect.startswith(paths[1]):
-                            yield dect
+    def subc(self, paths):
+        if not paths:
+            return
+        if self.command == paths[0]:
+            if len(paths) == 1:
+                yield self
+            else:
+                for blk in self.blocks:
+                    if blk.command == paths[1]:
+                        for i in blk.subc(paths[1:]):
+                            yield i
+                for dect in self.directives:
+                    if dect.startswith(paths[1]):
+                        yield dect
 
     def __str__(self):
-        f = StringIO.StringIO()
-        foo = self.printfoo(f)
-        f.close()
-        return foo
+        bufr = StringIO.StringIO()
+        content = self.printfoo(bufr)
+        bufr.close()
+        return content
+
+class config(object):
+    def __init__(self, cfg_file):
+        self.cfg_file = cfg_file
+        self.main_context = block()
+        for i in read_lines(cfg_file):
+            self.main_context.push(i)
+
+    def find(self, path):
+        res = list()
+        for i in self.main_context.find(path):
+            res.append(i)
+        return res
+
+
+def read_lines(fn):
+    f = open(fn, 'rt')
+    for i in f:
+        line = i.strip()
+        if not line.startswith('#'):
+            if not line == '':
+                line = line.replace('{', '{\n')
+                line = line.replace(';', ';\n')
+                line = line.replace('}', '\n}\n')
+                for j in line.split('\n'):
+                    if len(j) > 0:
+                        yield j
+    f.close()

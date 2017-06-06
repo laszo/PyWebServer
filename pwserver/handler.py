@@ -1,22 +1,19 @@
-import os
 import sys
-import shutil
-from RequestType import rtype
+import re
+from pwserver.RequestType import rtype
 
-class handler(object):
+class BaseHandler(object):
     MAX_READS = 65537
 
-    def __init__(self, request, wsgi_app, env):
+    def __init__(self, request, env):
         self.request = request
-        self.wsgi_app = wsgi_app
+        self.env = env
         self.wfile = None
         self.raw_request = None
-        self.environ = None
         self.server_name = None
         self.server_port = None
         self.status = None
         self.headers = list()
-        self.environ = env.copy()
         self.request_protocal = None
         self.request_path = None
         self.request_method = None
@@ -48,22 +45,10 @@ class handler(object):
             pass
         else:
             return False
-        return self.det_request_type()
-
-    def det_request_type(self):
-        if not self.request_path:
-            return False
-
+        return True
 
     def handle_requst(self):
-        pass
-
-    def wsgi_requst(self):
-        self.config_wsgi_environ()
-        self.headers = list()
-        result = self.wsgi_app(self.environ, self.start_response)
-        self.write_headers()
-        self.send_response(result)
+        raise NotImplementedError
 
     def send_error(self):
         self.close_request()
@@ -82,8 +67,63 @@ class handler(object):
             self._write("%s: %s\r\n" % (keyword, value))
         self._write('\r\n')
 
+    def start_response(self, status, headers):
+        self.status = status
+        for header in headers:
+            self.headers.append(header)
+        return self._write
+
+    def _write(self, data):
+        self.wfile.write(data)
+
+    def close_request(self):
+        self.request.close()
+
+class StaticFileHandler(BaseHandler):
+
+    G_response = 'HTTP/1.0 200 OK\n'
+
+    def __init__(self, request, locations, root, env):
+        BaseHandler.__init__(self, request, env)
+        self.locations = locations
+        self.request_type = rtype.WSGI
+        self.patterns = list()
+        self.root = root
+        for loc in self.locations:
+            if loc.args:
+                if loc.args[0] in '= | ~ | ~* | ^~':
+                    pat = re.compile(loc.args[1])
+                else:
+                    pat = re.compile(loc.args[0])
+                self.patterns.append((pat, loc))
+
+    def handle_requst(self):
+        print 'request: ', self.request_path
+        pass_args = ['proxy_pass', 'fastcgi_pass', 'uwsgi_pass', 'scgi_pass', 'memcached_pass']
+        for pat, loc in self.patterns:
+            if pat.match(self.request_path):
+                for i in loc.find('root'):
+                    self._write(self.G_response)
+                    res = self.get_file(i.replace(';', '').split()[-1])
+                    self.send_response(res)
+                    return
+
+    def get_file(self, path):
+        print 'reading file: ', self.root + path
+        tfile = open(self.root + path)
+        boo = tfile.read()
+        tfile.close()
+        return boo
+
+
+class WSGIHandler(BaseHandler):
+    def __init__(self, request, wsgi_app, env):
+        BaseHandler.__init__(self, request, env)
+        self.wsgi_app = wsgi_app
+        self.request_type = rtype.WSGI
+
     def config_wsgi_environ(self):
-        environ = self.environ
+        environ = self.env
         environ['SERVER_PROTOCOL'] = 'HTTP/1.0'
         environ['REQUEST_METHOD'] = self.request_method
         environ['PATH_INFO'] = self.request_path
@@ -100,16 +140,9 @@ class handler(object):
         environ['wsgi.multiprocess'] = True
         environ['wsgi.run_once'] = True
 
-    def start_response(self, status, headers):
-        self.status = status
-        for h in headers:
-            self.headers.append(h)
-        return self._write
-
-    def _write(self, data):
-        self.wfile.write(data)
-
-    def close_request(self):
-        self.request.close()
-
-
+    def handle_requst(self):
+        self.config_wsgi_environ()
+        self.headers = list()
+        result = self.wsgi_app(self.env, self.start_response)
+        self.write_headers()
+        self.send_response(result)

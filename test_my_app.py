@@ -1,5 +1,5 @@
 from wsgiref.simple_server import make_server
-from pwserver.server import BaseServer
+from pwserver.server import launch
 
 def app(env, start_response):
     print 'run in the test app'
@@ -7,8 +7,7 @@ def app(env, start_response):
     return ['hello, py world!']
 
 def test():
-    s = BaseServer(('127.0.0.1', 8091), app)
-    s.run_server()
+    launch(('127.0.0.1', 8091), app)
 
 if __name__ == '__main__':
     test()

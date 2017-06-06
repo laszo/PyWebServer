@@ -1,5 +1,5 @@
-from pwserver.server import BaseServer
-
+from pwserver.server import launch
+import SimpleHTTPServer
 from flask import Flask
 app = Flask(__name__)
 
@@ -14,8 +14,7 @@ def hello2():
 
 
 def flask():
-    s = BaseServer(('127.0.0.1', 8097), app)
-    s.run_server()
+    launch(('127.0.0.1', 8094), app, 'pwserver/out.conf')
 
 if __name__ == '__main__':
     flask()
