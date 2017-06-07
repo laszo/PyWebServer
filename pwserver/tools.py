@@ -1,6 +1,12 @@
 #! --encoding:utf8--
 
+import os
 import StringIO
+
+DEFAULT_ROOT = '/usr/local/var/www/'
+if os.name == 'nt':
+    DEFAULT_ROOT = 'C:\\nginx-1.13.0\\html'
+PASS_ARGS = ['proxy_pass', 'fastcgi_pass', 'uwsgi_pass', 'scgi_pass', 'memcached_pass']
 
 class block(object):
     def __init__(self, line=None, prefix=""):
@@ -100,6 +106,23 @@ class config(object):
             res.append(i)
         return res
 
+def init_mime_types(fpath):
+    tmimes = dict()
+    for line in open(fpath, 'rt'):
+        line = line.strip().replace(';', '')
+        if line.endswith('{') or line.endswith('}'):
+            continue
+        words = line.split()
+        for word in words[1:]:
+            tmimes[word] = words[0]
+    return tmimes
+
+mimes = init_mime_types('pwserver/mime.types')
+
+def get_mime_type(mtype):
+    if mimes.has_key(mtype):
+        return mimes[mtype]
+    return 'application/octet-stream'
 
 def read_lines(fn):
     f = open(fn, 'rt')
@@ -119,3 +142,7 @@ def read_lines(fn):
 def error(msg):
     print 'Error: %s' % msg
     raise Exception
+
+def parser(line):
+    if line:
+        return line.replace(';', '').split()[-1]

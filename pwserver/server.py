@@ -21,11 +21,11 @@ def launch(address=None, wsgiapp=None, cfg_file=None):
         worker.start()
 
 def runserver(config):
-    server = BaseServer(config=config)
+    server = ConfigServer(config=config)
     server.run_server()
 
 def runwsgi(address, wsgiapp):
-    server = BaseServer(address, wsgiapp)
+    server = WSGIServer(address, wsgiapp)
     server.run_server()
 
 
@@ -34,36 +34,12 @@ class BaseServer(object):
     MAX_READS = 65537
 
     # todo 读取配置文件，或者指定配置项，包括几个工作进程，运行哪些server等，给进程起名字，便于管理
-    def __init__(self, address=None, wsgiapp=None, config=None, handlercls=None):
+    def __init__(self, address=None):
         self.server_name = None
         self.server_port = None
-        self.wsgiapp = wsgiapp
         self.address = address
-        self.handlercls = handlercls
-        if address and wsgiapp:
-            self.handlercls = handler.WSGIHandler
-        elif config:
-            self.config = config
-            self.handlercls = handler.ConfigFileHandler
-            self.locations = list()
-            self.read_config(config)
-        else:
-            t.error('can not do nothing')
         self.base_environ = None
         self.socket = socket.socket()
-        self.activate_server()
-
-    def read_config(self, config):
-        listens = [i for i in config.find('listen')]
-        if not listens:
-            t.error('no port given')
-        port = listens[0].replace(';', '').split()[1]
-        self.address = ('', int(port))
-        print 'server port:%s' % port
-        names = [i for i in config.find('server_name')]
-        if names:
-            self.server_name = names[0]
-            print self.server_name
 
     def activate_server(self):
         try:
@@ -82,8 +58,6 @@ class BaseServer(object):
     def run_server(self):
         try:
             self.waiting_request()
-        except KeyboardInterrupt:
-            self.colse_server()
         finally:
             self.colse_server()
 
@@ -106,16 +80,57 @@ class BaseServer(object):
                 # t = threading.Thread(target=self.handle, args=(c, ))
                 # t.start()
 
-    def handle_request(self, c):
-        if self.handlercls:
-            if self.wsgiapp:
-                hdler = self.handlercls(c, self.wsgiapp, self.base_environ.copy())
-                hdler.handle()
-            elif self.config:
-                hdler = self.handlercls(c, self.config, self.base_environ.copy())
-                hdler.handle()
+    def handle_request(self, conn):
+        raise Exception
 
     def colse_server(self):
         print 'Server is about to close...'
         self.socket.close()
+
+class ConfigServer(BaseServer):
+    def __init__(self, config):
+        BaseServer.__init__(self)
+        self.config = config
+        self.handlercls = handler.ConfigFileHandler
+        self.patterns = list()
+        self.root = t.parser(config.subd('root'))
+        self.read_config(config)
+        self.activate_server()
+
+    def read_config(self, config):
+        listens = [i for i in config.find('listen')]
+        if not listens:
+            t.error('no port given')
+        port = listens[0].replace(';', '').split()[1]
+        self.address = ('', int(port))
+        print 'server port:%s' % port
+
+        names = [i for i in config.find('server_name')]
+        if names:
+            self.server_name = names[0]
+            print self.server_name
+
+        for loc in config.find('location'):
+            if loc.args:
+                if loc.args[0] in '= | ~ | ~* | ^~':
+                    patt = loc.args[1]
+                else:
+                    patt = loc.args[0]
+                self.patterns.append((patt, loc))
+
+    def handle_request(self, request):
+        hdler = self.handlercls(request, self.patterns, self.base_environ.copy())
+        hdler.handle()
+
+class WSGIServer(BaseServer):
+    def __init__(self, address, wsgiapp):
+        BaseServer.__init__(self, address=address)
+        self.wsgiapp = wsgiapp
+        self.handlercls = handler.WSGIHandler
+        self.activate_server()
+
+    def handle_request(self, request):
+        hdler = self.handlercls(request, self.wsgiapp, self.base_environ.copy())
+        hdler.handle()
+
 

@@ -14,8 +14,8 @@ def hello2():
 
 
 def flask():
-    launch(cfg_file='pwserver/config.conf')
-    # launch(('127.0.0.1', 8094), app, 'pwserver/out.conf')
+    # launch(cfg_file='pwserver/config.conf')
+    launch(('127.0.0.1', 8094), app, 'pwserver/config.conf')
 
 if __name__ == '__main__':
     flask()
