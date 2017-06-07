@@ -81,7 +81,7 @@ class BaseServer(object):
                 # t.start()
 
     def handle_request(self, conn):
-        raise Exception
+        raise NotImplementedError
 
     def colse_server(self):
         print 'Server is about to close...'
