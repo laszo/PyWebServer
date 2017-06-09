@@ -46,6 +46,7 @@ class BaseHandler(object):
                 self.request_path, self.request_string = self.request_path.split('?', 1)
             else:
                 self.request_string = ''
+        print '%s %s' % (self.request_method, self.request_path)
         return True
 
     def handle_requst(self):
@@ -99,6 +100,7 @@ class ConfigFileHandler(BaseHandler):
 
     def send_file(self, fpath):
         if not os.path.exists(fpath):
+            print 'not found: ', fpath
             return
         print 'sending: ', fpath
 
@@ -118,10 +120,12 @@ class ConfigFileHandler(BaseHandler):
         pass
 
     def get_uri(self):
-        path = self.request_path.replace('/', '')
-        if not path:
-            path = 'index.html'
-        return path
+        if not self.request_path:
+            return 'index.html'
+        if self.request_path.startswith('/'):
+            return self.request_path[1:]
+        if not self.request_path:
+            return 'index.html'
 
     def get_root(self, location):
         if not location:
@@ -160,6 +164,7 @@ class WSGIHandler(BaseHandler):
         # environ['CONTENT_LENGTH'] = ''
 
         environ['wsgi.url_scheme'] = 'http'
+        # todo: wsgi.input should be something
         environ['wsgi.input'] = sys.stdin
         environ['wsgi.errors'] = sys.stderr
         environ['wsgi.version'] = (1, 0)

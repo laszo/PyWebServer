@@ -117,7 +117,8 @@ def init_mime_types(fpath):
             tmimes[word] = words[0]
     return tmimes
 
-mimes = init_mime_types('pwserver/mime.types')
+PWD =  os.path.split(os.path.realpath(__file__))[0]
+mimes = init_mime_types(os.path.join(PWD, 'mime.types'))
 
 def get_mime_type(mtype):
     if mimes.has_key(mtype):
