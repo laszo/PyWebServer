@@ -11,7 +11,7 @@ class BaseHandler(object):
         self.request = request
         self.env = env
         self.wfile = self.request.makefile('wb', -1)
-        self.raw_request = None
+        self.rfile = self.request.makefile('rb', 0)
         self.server_name = None
         self.server_port = None
         self.status = None
@@ -23,12 +23,17 @@ class BaseHandler(object):
         self.request_type = rtype.STATIC_FILE
 
     def handle(self):
-        self.raw_request = self.request.recv(self.MAX_READS)
-        if self.paser_request():
+        if self.recv_request():
             self.handle_requst()
             self.close_request()
         else:
             self.send_error()
+
+    def recv_request(self):
+        # self.raw_request = self.request.recv(self.MAX_READS)
+        self.raw_request = self.rfile.readline(self.MAX_READS)
+        print self.raw_request
+        return self.paser_request()
 
     def paser_request(self):
         lines = self.raw_request.split('\r\n')
@@ -81,6 +86,7 @@ class ConfigFileHandler(BaseHandler):
         BaseHandler.__init__(self, request, env)
         self.request_type = rtype.STATIC_FILE
         self.patterns = patterns
+        self.raw_request = None
 
     def handle_requst(self):
         location = self.find_location()
@@ -123,9 +129,11 @@ class ConfigFileHandler(BaseHandler):
         if not self.request_path:
             return 'index.html'
         if self.request_path.startswith('/'):
-            return self.request_path[1:]
-        if not self.request_path:
-            return 'index.html'
+            rpath = self.request_path[1:]
+            if not rpath:
+                rpath = 'index.html'
+            return rpath
+        return 'index.html'
 
     def get_root(self, location):
         if not location:
@@ -165,7 +173,7 @@ class WSGIHandler(BaseHandler):
 
         environ['wsgi.url_scheme'] = 'http'
         # todo: wsgi.input should be something
-        environ['wsgi.input'] = sys.stdin
+        environ['wsgi.input'] = self.rfile
         environ['wsgi.errors'] = sys.stderr
         environ['wsgi.version'] = (1, 0)
         environ['wsgi.multithread'] = False
