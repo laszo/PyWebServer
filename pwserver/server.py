@@ -17,7 +17,8 @@ def launch(address=None, wsgiapp=None, cfg_file=None):
             worker = multiprocessing.Process(target=runserver, args=(server, ))
             worker.start()
     if address and wsgiapp:
-        worker = multiprocessing.Process(target=runwsgi, args=(address, wsgiapp, ))
+        # runwsgi(address, wsgiapp)
+        worker = threading.Thread(target=runwsgi, args=(address, wsgiapp, ))
         worker.start()
 
 def runserver(config):

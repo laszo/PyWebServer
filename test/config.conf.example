@@ -1,0 +1,8 @@
+http {
+    server {
+            listen 8094;
+            location / {
+                root C:\Users\Administrator\code\PyWebServer\test\static;
+            }
+        }
+}

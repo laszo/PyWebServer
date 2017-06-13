@@ -2,7 +2,6 @@ import sys
 import shutil
 import os.path
 import tools as t
-from pwserver.RequestType import rtype
 
 class BaseHandler(object):
     MAX_READS = 65537
@@ -20,7 +19,7 @@ class BaseHandler(object):
         self.request_path = None
         self.request_method = None
         self.request_string = None
-        self.request_type = rtype.STATIC_FILE
+        self.raw_request = None
 
     def handle(self):
         if self.recv_request():
@@ -30,9 +29,8 @@ class BaseHandler(object):
             self.send_error()
 
     def recv_request(self):
-        # self.raw_request = self.request.recv(self.MAX_READS)
-        self.raw_request = self.rfile.readline(self.MAX_READS)
-        print self.raw_request
+        self.raw_request = self.request.recv(self.MAX_READS)
+        # self.raw_request = self.rfile.readline(self.MAX_READS) # why this line blocks?
         return self.paser_request()
 
     def paser_request(self):
@@ -84,7 +82,6 @@ class BaseHandler(object):
 class ConfigFileHandler(BaseHandler):
     def __init__(self, request, patterns, env):
         BaseHandler.__init__(self, request, env)
-        self.request_type = rtype.STATIC_FILE
         self.patterns = patterns
         self.raw_request = None
 
@@ -157,9 +154,7 @@ class ConfigFileHandler(BaseHandler):
 class WSGIHandler(BaseHandler):
     def __init__(self, request, wsgi_app, env):
         BaseHandler.__init__(self, request, env)
-        self.request_type = rtype.WSGI
         self.wsgi_app = wsgi_app
-        self.request_type = rtype.WSGI
 
     def config_wsgi_environ(self):
         environ = self.env

@@ -1,0 +1,2 @@
+# todo 正在监听时，Ctrl+C不管用，非要浏览器访问一下才管用
+# self.raw_request = self.rfile.readline(self.MAX_READS) # why this line blocks?
