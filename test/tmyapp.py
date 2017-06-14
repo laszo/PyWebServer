@@ -34,4 +34,5 @@ def demoapp(env, start_response):
 if __name__ == '__main__':
     # make_server('', 8181, pwapp()).serve_forever()
     pw.launch(('127.0.0.1', 8181), demoapp)
+    # pw.launch(cfg_file='config.conf')
 

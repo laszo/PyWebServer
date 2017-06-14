@@ -51,26 +51,14 @@ class BaseServer(object):
     def waiting_request(self):
         print 'Waiting request...'
         while True:
-            print 'before select.select'
             rdl, wrl, erl = select.select([self.socket], [], [])
-            print 'after select.select'
             for req in rdl:
                 conn, add = req.accept()
-                print 'request from %s:%d' % conn.getsockname()
+                print 'Request from :%s:%d' % add
                 try:
-                    print 'before dispath'
-                    self.dispath(conn)
-                    print 'after dispath'
-                except socket.error as err:
-                    print 'error in waiting_request'
-                    print err
+                    self.handle_request(conn)
+                except socket.error:
                     conn.close()
-
-    def dispath(self, conn):
-        self.handle_request(conn)
-        # 好像问题出在这，不处理前一个请求就处理不了后一个请求？
-        # worker = threading.Thread(target=self.handle_request, args=(conn,))
-        # worker.start()
 
     def handle_request(self, conn):
         raise NotImplementedError

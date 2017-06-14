@@ -1,5 +1,6 @@
 # todo 正在监听时，Ctrl+C不管用，非要浏览器访问一下才管用
 # self.raw_request = self.rfile.readline(self.MAX_READS) # why this line blocks?
+# todo 静态文件服务器，没有找到文件时应返回正确的错误
 
 # pw.launch(('', 8180), flask_app) 没问题，不会阻塞
 

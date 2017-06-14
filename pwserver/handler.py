@@ -26,19 +26,11 @@ class BaseHandler(object):
         self.should_close = False
 
     def handle(self):
-        self.should_close = False
-
-        self.handle_one_request()
-        while not self.should_close:
-            self.handle_one_request()
-
-        self.close()
-
-    def handle_one_request(self):
         if self.recv_request():
             self.handle_requst()
         else:
             self.send_error()
+        self.finish()
 
     def recv_request(self):
         self.raw_request = self.request.recv(self.MAX_READS)
@@ -83,28 +75,20 @@ class BaseHandler(object):
         self._write("\r\n")
 
     def _write(self, data):
-        print 'writing:'
-        print data
         self.wfile.write(data)
 
     def flush(self):
         self.wfile.flush()
 
-    def close(self):
-        if self.should_close:
-            self.finish()
-
     def finish(self):
-        print 'finish and close wfile and rfile %s:%d' % self.request.getsockname()
         if not self.wfile.closed:
             try:
                 self.flush()
             except socket.error:
-                # An final socket error may have occurred here, such as
-                # the local error ECONNABORTED.
                 pass
         self.wfile.close()
         self.rfile.close()
+        self.request.close()
 
 
 class ConfigFileHandler(BaseHandler):
@@ -122,12 +106,13 @@ class ConfigFileHandler(BaseHandler):
                 fpath = os.path.join(root, uri)
                 self.send_file(fpath)
                 self.flush()
-                self.should_close = True
+                return
             else:
                 for pasarg in t.PASS_ARGS:
                     targ = t.parser(location.subd(pasarg))
                     if targ:
                         print '%s: %s' % (pasarg, targ)
+        self.send_error()
 
     def send_file(self, fpath):
         if not os.path.exists(fpath):

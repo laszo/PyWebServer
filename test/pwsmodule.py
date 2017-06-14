@@ -16,8 +16,3 @@ def pwpath():
 sys.path.append(pwpath())
 
 import pwserver
-
-
-if __name__ == '__main__':
-    import os
-    pwserver.launch(cfg_file='config.conf')
