@@ -34,7 +34,7 @@ class _application(object):
     def process(self):
         func, mat = self.find_func()
         if func:
-            context = self.request
+            context = self.env
             context['arg'] = None
             if mat:
                 if isinstance(mat, list):
@@ -73,7 +73,3 @@ class application(_application):
             self.start_response('404 NOT FOUND', [('Content-type', 'text/plain')])
             return 'not found'
 
-
-def demoapp(env, start_response):
-    start_response('200 OK', [('Content-type', 'text/plain')])
-    return ['hello, world']

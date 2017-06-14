@@ -16,4 +16,3 @@ def pwpath():
 sys.path.append(pwpath())
 
 import pwserver
-import app
