@@ -189,8 +189,9 @@ class WSGIHandler(BaseHandler):
         return self._write
 
     def send_resutl(self, result):
-        for res in result:
-            self._write(res)
+        if result:
+            for res in result:
+                self._write(res)
         self.end_response()
         self.close_request()
 

@@ -1,18 +1,30 @@
 from wsgiref.simple_server import make_server
 from pwsmodule import pwserver as pw
 
-def app(env, start_response):
-    start_response('200 OK', [('Content-type', 'text/plain')])
-    return ['hello, py world!']
+def hello1(context):
+    print context
+    return 'hello1'
 
-def main():
-    pw.server.launch(('127.0.0.1', 8180), app)
+def hello2(context):
+    print context
+    return 'hello2'
+
+def makeapp():
+    urls = [
+        ('/', hello1),
+        ('/hello1', hello1),
+        ('/hello2', hello2),
+        ]
+    app = pw.application(urls)
+    return app
+
+def pwserve():
+    pw.server.launch(('127.0.0.1', 8180), makeapp())
 
 def wwsgiref():
-    s = make_server('', 8180, app)
-    s.serve_forever()
+    sver = make_server('', 8180, makeapp())
+    sver.serve_forever()
 
 if __name__ == '__main__':
-    main()
-    # wwsgiref()
-
+    # pwserve()
+    wwsgiref()

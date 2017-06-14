@@ -8,3 +8,4 @@ aim to build a 'real' web server from the very beginning in python
 """
 
 from server import launch
+from framework import application
