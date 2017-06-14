@@ -26,7 +26,6 @@ class BaseServer(object):
             host, port = self.socket.getsockname()[:2]
             self.server_name = socket.getfqdn(host)
             self.server_port = port
-            self.setup_environ()
             print 'Server listen at %s:%s' % (self.server_name, str(self.server_port))
         except socket.error as err:
             print 'Server Error:' + err.message
@@ -38,15 +37,6 @@ class BaseServer(object):
             self.waiting_request()
         finally:
             self.colse_server()
-
-    def setup_environ(self):
-        env = self.base_environ = dict(os.environ.items()).copy()
-        env['SERVER_NAME'] = self.server_name
-        env['GATEWAY_INTERFACE'] = 'CGI/1.1'
-        env['SERVER_PORT'] = str(self.server_port)
-        env['REMOTE_HOST'] = ''
-        env['CONTENT_LENGTH'] = ''
-        env['SCRIPT_NAME'] = ''
 
     def waiting_request(self):
         print 'Waiting request...'
@@ -100,7 +90,7 @@ class ConfigServer(BaseServer):
                 self.patterns.append((patt, loc))
 
     def handle_request(self, request):
-        hdler = self.handlercls(request, self.patterns, self.base_environ.copy())
+        hdler = self.handlercls(request, self.patterns, {})
         hdler.handle()
 
 
@@ -110,6 +100,16 @@ class WSGIServer(BaseServer):
         self.wsgiapp = wsgiapp
         self.handlercls = handler.WSGIHandler
         self.activate_server()
+        self.setup_environ()
+
+    def setup_environ(self):
+        env = self.base_environ = dict(os.environ.items()).copy()
+        env['SERVER_NAME'] = self.server_name
+        env['GATEWAY_INTERFACE'] = 'CGI/1.1'
+        env['SERVER_PORT'] = str(self.server_port)
+        env['REMOTE_HOST'] = ''
+        env['CONTENT_LENGTH'] = ''
+        env['SCRIPT_NAME'] = ''
 
     def handle_request(self, request):
         hdler = self.handlercls(request, self.wsgiapp, self.base_environ.copy())
