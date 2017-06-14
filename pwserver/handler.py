@@ -4,9 +4,19 @@ import shutil
 import os.path
 import tools as t
 
+MAX_READS = 65537
+
+class VeryBaseHandler(object):
+    def __init__(self, request):
+        self.request = request
+
+    def handle(self):
+        self.request.recv(MAX_READS)
+        self.request.send(t.RESP404)
+        self.request.close()
+
 
 class BaseHandler(object):
-    MAX_READS = 65537
 
     def __init__(self, request, env):
         assert request
@@ -30,10 +40,9 @@ class BaseHandler(object):
             self.handle_requst()
         else:
             self.send_error()
-        self.finish()
 
     def recv_request(self):
-        self.raw_request = self.request.recv(self.MAX_READS)
+        self.raw_request = self.request.recv(MAX_READS)
         # self.raw_request = self.rfile.readline(self.MAX_READS) # why this line blocks?
         return self.paser_request()
 
@@ -61,7 +70,8 @@ class BaseHandler(object):
         raise NotImplementedError
 
     def send_error(self):
-        pass
+        self._write(t.RESP404)
+        self.finish()
 
     def send_status(self):
         if not self.status.startswith('HTTP'):
@@ -105,7 +115,7 @@ class ConfigFileHandler(BaseHandler):
             if root:
                 fpath = os.path.join(root, uri)
                 self.send_file(fpath)
-                self.flush()
+                self.finish()
                 return
             else:
                 for pasarg in t.PASS_ARGS:
@@ -117,6 +127,7 @@ class ConfigFileHandler(BaseHandler):
     def send_file(self, fpath):
         if not os.path.exists(fpath):
             print 'not found: ', fpath
+            self.send_error()
             return
         print 'sending: ', fpath
 
@@ -131,6 +142,8 @@ class ConfigFileHandler(BaseHandler):
         self.end_headers()
 
         shutil.copyfileobj(tfile, self.wfile)
+
+        self.flush()
 
     def send_pass(self, loc):
         pass
@@ -193,9 +206,13 @@ class WSGIHandler(BaseHandler):
         self.config_wsgi_environ()
         self.headers = list()
         result = self.wsgi_app(self.env, self.start_response)
-        self.write_headers()
-        self.send_resutl(result)
-        self.flush()
+        if result:
+            self.write_headers()
+            self.send_resutl(result)
+            self.flush()
+            self.finish()
+        else:
+            self.send_error()
 
     def start_response(self, status, headers):
         self.status = status

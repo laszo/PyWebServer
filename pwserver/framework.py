@@ -68,7 +68,6 @@ class application(_application):
         self.pre(env, start_response)
         res = self.process()
         if res:
-            print 'result: %s' % res
             return self.after(res)
         else:
             self.start_response('404 NOT FOUND', [('Content-type', 'text/plain')])

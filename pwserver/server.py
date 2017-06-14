@@ -115,4 +115,12 @@ class WSGIServer(BaseServer):
         hdler = self.handlercls(request, self.wsgiapp, self.base_environ.copy())
         hdler.handle()
 
+class _TestServer(BaseServer):
+    def handle_request(self, request):
+        hdler = handler.VeryBaseHandler(request)
+        hdler.handle()
 
+if __name__ == '__main__':
+    tser = _TestServer(('', 8980))
+    tser.activate_server()
+    tser.run_server()

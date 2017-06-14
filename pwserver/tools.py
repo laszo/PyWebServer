@@ -8,6 +8,23 @@ if os.name == 'nt':
     DEFAULT_ROOT = 'C:\\nginx-1.13.0\\html'
 PASS_ARGS = ['proxy_pass', 'fastcgi_pass', 'uwsgi_pass', 'scgi_pass', 'memcached_pass']
 
+import SimpleHTTPServer
+
+RESP404 = """HTTP/1.0 404 Not Found
+
+
+<head>
+<title>Error response</title>
+</head>
+<body>
+<h1>Error response</h1>
+<p>Error code 404.
+<p>Message: Not Found.
+<p>Error code explanation: Nothing matches the given URI.
+</body>
+"""
+
+
 class block(object):
     def __init__(self, line=None, prefix=""):
         self.prefix = prefix
