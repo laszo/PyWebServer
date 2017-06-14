@@ -7,5 +7,5 @@ aim to build a 'real' web server from the very beginning in python
 [PyWebServer]: https://github.com/laszo/PyWebServer
 """
 
-from server import launch
+from launch import launch
 from framework import application

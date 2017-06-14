@@ -1,16 +1,19 @@
 import sys
+import socket
 import shutil
 import os.path
 import tools as t
+
 
 class BaseHandler(object):
     MAX_READS = 65537
 
     def __init__(self, request, env):
+        assert request
         self.request = request
-        self.env = env
-        self.wfile = self.request.makefile('wb', -1)
-        self.rfile = self.request.makefile('rb', 0)
+        self.env = env.copy()
+        self.wfile = self.request.makefile('wb', 0)
+        self.rfile = self.request.makefile('rb', -1)
         self.server_name = None
         self.server_port = None
         self.status = None
@@ -20,11 +23,20 @@ class BaseHandler(object):
         self.request_method = None
         self.request_string = None
         self.raw_request = None
+        self.should_close = False
 
     def handle(self):
+        self.should_close = False
+
+        self.handle_one_request()
+        while not self.should_close:
+            self.handle_one_request()
+
+        self.close()
+
+    def handle_one_request(self):
         if self.recv_request():
             self.handle_requst()
-            self.close_request()
         else:
             self.send_error()
 
@@ -36,6 +48,7 @@ class BaseHandler(object):
     def paser_request(self):
         lines = self.raw_request.split('\r\n')
         first = lines[0]
+        print 'Request: %s' % first
         words = first.split()
         if len(words) > 1:
             self.request_method = words[0]
@@ -56,7 +69,7 @@ class BaseHandler(object):
         raise NotImplementedError
 
     def send_error(self):
-        self.close_request()
+        pass
 
     def send_status(self):
         if not self.status.startswith('HTTP'):
@@ -70,14 +83,29 @@ class BaseHandler(object):
         self._write("\r\n")
 
     def _write(self, data):
+        print 'writing:'
+        print data
         self.wfile.write(data)
 
-    def end_response(self):
+    def flush(self):
         self.wfile.flush()
-        self.wfile.close()
 
-    def close_request(self):
-        self.request.close()
+    def close(self):
+        if self.should_close:
+            self.finish()
+
+    def finish(self):
+        print 'finish and close wfile and rfile %s:%d' % self.request.getsockname()
+        if not self.wfile.closed:
+            try:
+                self.flush()
+            except socket.error:
+                # An final socket error may have occurred here, such as
+                # the local error ECONNABORTED.
+                pass
+        self.wfile.close()
+        self.rfile.close()
+
 
 class ConfigFileHandler(BaseHandler):
     def __init__(self, request, patterns, env):
@@ -93,8 +121,8 @@ class ConfigFileHandler(BaseHandler):
             if root:
                 fpath = os.path.join(root, uri)
                 self.send_file(fpath)
-                self.end_response()
-                self.close_request()
+                self.flush()
+                self.should_close = True
             else:
                 for pasarg in t.PASS_ARGS:
                     targ = t.parser(location.subd(pasarg))
@@ -151,6 +179,7 @@ class ConfigFileHandler(BaseHandler):
                     location = loc
         return location
 
+
 class WSGIHandler(BaseHandler):
     def __init__(self, request, wsgi_app, env):
         BaseHandler.__init__(self, request, env)
@@ -181,6 +210,7 @@ class WSGIHandler(BaseHandler):
         result = self.wsgi_app(self.env, self.start_response)
         self.write_headers()
         self.send_resutl(result)
+        self.flush()
 
     def start_response(self, status, headers):
         self.status = status
@@ -192,8 +222,6 @@ class WSGIHandler(BaseHandler):
         if result:
             for res in result:
                 self._write(res)
-        self.end_response()
-        self.close_request()
 
     def write_headers(self):
         self.send_status()

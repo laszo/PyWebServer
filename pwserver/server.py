@@ -1,49 +1,26 @@
 # --encoding:utf-8--
 import socket
 import select
-import threading
-import multiprocessing
 import os
-import sys
 import handler
+import threading
 import tools as t
-
-
-def launch(address=None, wsgiapp=None, cfg_file=None):
-    if cfg_file:
-        config = t.config(cfg_file)
-        servers = config.find('http.server')
-        for server in servers:
-            worker = multiprocessing.Process(target=runserver, args=(server, ))
-            worker.start()
-    if address and wsgiapp:
-        # runwsgi(address, wsgiapp)
-        worker = threading.Thread(target=runwsgi, args=(address, wsgiapp, ))
-        worker.start()
-
-def runserver(config):
-    server = ConfigServer(config=config)
-    server.run_server()
-
-def runwsgi(address, wsgiapp):
-    server = WSGIServer(address, wsgiapp)
-    server.run_server()
 
 
 class BaseServer(object):
 
     MAX_READS = 65537
 
-    # todo 读取配置文件，或者指定配置项，包括几个工作进程，运行哪些server等，给进程起名字，便于管理
     def __init__(self, address=None):
         self.server_name = None
         self.server_port = None
         self.address = address
         self.base_environ = None
-        self.socket = socket.socket()
+        self.socket = None
 
     def activate_server(self):
         try:
+            self.socket = socket.socket()
             self.socket.bind(self.address)
             self.socket.listen(5)
             host, port = self.socket.getsockname()[:2]
@@ -74,12 +51,26 @@ class BaseServer(object):
     def waiting_request(self):
         print 'Waiting request...'
         while True:
+            print 'before select.select'
             rdl, wrl, erl = select.select([self.socket], [], [])
+            print 'after select.select'
             for req in rdl:
                 conn, add = req.accept()
-                self.handle_request(conn)
-                # t = threading.Thread(target=self.handle, args=(c, ))
-                # t.start()
+                print 'request from %s:%d' % conn.getsockname()
+                try:
+                    print 'before dispath'
+                    self.dispath(conn)
+                    print 'after dispath'
+                except socket.error as err:
+                    print 'error in waiting_request'
+                    print err
+                    conn.close()
+
+    def dispath(self, conn):
+        self.handle_request(conn)
+        # 好像问题出在这，不处理前一个请求就处理不了后一个请求？
+        # worker = threading.Thread(target=self.handle_request, args=(conn,))
+        # worker.start()
 
     def handle_request(self, conn):
         raise NotImplementedError
@@ -87,6 +78,7 @@ class BaseServer(object):
     def colse_server(self):
         print 'Server is about to close...'
         self.socket.close()
+
 
 class ConfigServer(BaseServer):
     def __init__(self, config):
@@ -122,6 +114,7 @@ class ConfigServer(BaseServer):
     def handle_request(self, request):
         hdler = self.handlercls(request, self.patterns, self.base_environ.copy())
         hdler.handle()
+
 
 class WSGIServer(BaseServer):
     def __init__(self, address, wsgiapp):

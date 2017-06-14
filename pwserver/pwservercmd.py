@@ -1,20 +1,5 @@
-import sys
-# import server
-# from server import launch
-
-def start():
-    pass
-
-def reload():
-    pass
-
-def wsgi():
-    pass
 
 def main():
-    print sys.argv
-    print globals()
-    print locals()
     import signal
     signal.signal(signal.SIGUSR1, suser1)
     import time

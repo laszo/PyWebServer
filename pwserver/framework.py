@@ -1,16 +1,16 @@
 import re
 
-def match(pattern, string):
-    print 'pattern: %s' % pattern
-    print 'string: %s' % string
+
+def match(pattern, url):
     reg = re.compile(pattern)
-    m = reg.match(string)
+    m = reg.match(url)
     if not m:
         return False, None
     if m.groupdict():
         return True, dict(m.groupdict())
     elif m.group():
         return True, m.group()
+
 
 class _application(object):
     def __init__(self, urlpatterns):
@@ -21,24 +21,36 @@ class _application(object):
         self.request = None
         self.env = None
         self._start_response = None
-        self.status_sent = False
 
     def pre(self, env, start_response):
         self.env = env
+        self.request = dict()
         self._start_response = start_response
 
     def start_response(self, status, headers):
-        if not self.status_sent:
+        if self._start_response:
             self._start_response(status, headers)
-            self.status_sent = True
+
+    def process(self):
+        func, mat = self.find_func()
+        if func:
+            context = self.request
+            context['arg'] = None
+            if mat:
+                if isinstance(mat, list):
+                    context['arg'] = mat
+                elif isinstance(mat, dict):
+                    context['arg'] = mat
+            return func(context)
 
     def find_func(self):
         url = self.env['PATH_INFO']
+        if self.env['QUERY_STRING']:
+            url = '%s?%s' % (url, self.env['QUERY_STRING'])
         for pat, func in self.urlpatterns:
             mok, mat = match(pat, url)
             if mok:
-                print mat
-                return func
+                return func, mat
 
     def after(self, result):
         self.start_response('200 OK', [('Content-type', 'text/plain')])
@@ -47,18 +59,22 @@ class _application(object):
     def add_rule(self, url, func):
         self.urlpatterns.append((url, func))
 
+
 class application(_application):
     def __init__(self, urlpatterns):
         _application.__init__(self, urlpatterns)
 
     def __call__(self, env, start_response):
         self.pre(env, start_response)
-        func = self.find_func()
-        if func:
-            res = func(self.request)
+        res = self.process()
+        if res:
+            print 'result: %s' % res
             return self.after(res)
         else:
             self.start_response('404 NOT FOUND', [('Content-type', 'text/plain')])
             return 'not found'
 
 
+def demoapp(env, start_response):
+    start_response('200 OK', [('Content-type', 'text/plain')])
+    return ['hello, world']
