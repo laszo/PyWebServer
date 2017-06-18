@@ -2,13 +2,15 @@
 aim to build a 'real' web server from the very beginning in python
 
 ## Usage
-usage: pwserver [static [-f PATH]] [-w MODULE_PATH:APP]
+usage: 
 
-PATH: Your config file path, default /etc/pwserver.conf
+    pwserver [static [-f PATH]] [-w MODULE_PATH:APP]
 
-MODULE_PATH: Your module which contains a WSGI application sample: 
-    'django.wsgi'
-    '../django.wsgi'
-    '/user/code/myproject/'
+    PATH: Your config file path, default /etc/pwserver.conf
 
-APP: Your WSGI application name.
+    MODULE_PATH: Your module which contains a WSGI application sample: 
+        'django.wsgi'
+        '../django.wsgi'
+        '/user/code/myproject/'
+
+    APP: Your WSGI application name.
