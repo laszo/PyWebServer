@@ -1,7 +1,10 @@
 #!/usr/bin/python
-import sys, os
+import importlib
 import multiprocessing
+import os
+import sys
 import threading
+
 import tools as t
 from server import ConfigServer, WSGIServer
 
@@ -42,25 +45,25 @@ def runserver(config):
     server.run_server()
 
 def findapp(apppath):
-    # try:
-    parts = apppath.split(":", 1)
-    if len(parts) == 1:
-        module, obj = apppath, "application"
-    else:
-        module, obj = parts[0], parts[1]
-    mpath = '/'.join(module.split('/')[:-1])
-    sys.path.append(os.path.realpath(mpath))
-    module = module.split('/')[-1]
-    mod = sys.modules[module]
-    print os.path.realpath(mpath)
-    print module
-    print mod
-    app = eval(obj, vars(mod))
-    print app
-    return app
-    # except Exception:
-    #     msg = "Failed to find application."
-    #     raise
+    try:
+        parts = apppath.split(":", 1)
+        if len(parts) == 1:
+            module, obj = apppath, "application"
+        else:
+            module, obj = parts[0], parts[1]
+        mpath = '/'.join(module.split('/')[:-1])
+        sys.path.append(os.path.realpath(mpath))
+        module = module.split('/')[-1]
+
+        importlib.import_module(module)
+        mod = sys.modules[module]
+
+        app = eval(obj, vars(mod))
+
+        return app
+    except Exception:
+        msg = "Failed to find application."
+        raise
 
 def runwsgi(address, wsgiapp):
     app = findapp(wsgiapp)
