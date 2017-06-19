@@ -9,16 +9,18 @@ import tools as t
 from server import ConfigServer, WSGIServer
 
 DEFAULT_CONFIG_FILE = '/etc/pwserver.conf'
+DEFAULT_WSGI_ADDRESS = ('', 8180)
 
 USEAGE = """
 ------------------------------------------------------------------------------
-usage: pwserver [-h || --help] [static [-f PATH]] [-w MODULE_PATH:APP] 
+usage: pwserver [-h || --help] [static [-f PATH]] [-w MODULE_PATH:APP [-a ADDRESS]] 
 
 -h                  :  Show usage and return (also --help).
 
 static [-f PATH]    : serving as a static file server. PATH is Your config file path, default /etc/pwserver.conf
 
 -w                  : serving as a WSGI server. MODULE_PATH: Your module which contains a WSGI application. APP: Your WSGI application name.
+-a                  : ADDRESS: WSGI server address.
 ------------------------------------------------------------------------------
 """
 
@@ -32,7 +34,9 @@ def launch(address=None, wsgiapp=None, cfg_file=None):
         for server in servers:
             worker = multiprocessing.Process(target=runserver, args=(server, ))
             worker.start()
-    if address and wsgiapp:
+    if wsgiapp:
+        if not address:
+            address = DEFAULT_WSGI_ADDRESS
         # runwsgi(address, wsgiapp)
         worker = threading.Thread(target=runwsgi, args=(address, wsgiapp, ))
         worker.start()
@@ -103,7 +107,13 @@ def run():
     elif '-w' in argv:
         res = find_after_arg(argv, '-w', 'WSGI application')
         if res:
-            launch(address=('', 8180), wsgiapp=res)
+            if '-a' in argv:
+                add = find_after_arg(argv, '-a', 'WSGI serving address')
+                if not add:
+                    return
+            else:
+                add = DEFAULT_WSGI_ADDRESS
+            launch(address=add, wsgiapp=res)
         else:
             return
     else:

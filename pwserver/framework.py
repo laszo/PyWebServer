@@ -35,12 +35,13 @@ class _application(object):
         func, mat = self.find_func()
         if func:
             context = self.env
-            context['arg'] = None
+            context['args'] = list()
+            context['kwarg'] = dict()
             if mat:
                 if isinstance(mat, list):
-                    context['arg'] = mat
+                    context['args'] = mat
                 elif isinstance(mat, dict):
-                    context['arg'] = mat
+                    context['kwarg'] = dict()
             return func(context)
 
     def find_func(self):

@@ -22,7 +22,7 @@ class BaseServer(object):
         try:
             self.socket = socket.socket()
             self.socket.bind(self.address)
-            self.socket.listen(5)
+            self.socket.listen(1024)
             host, port = self.socket.getsockname()[:2]
             self.server_name = socket.getfqdn(host)
             self.server_port = port

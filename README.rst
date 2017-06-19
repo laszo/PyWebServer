@@ -44,6 +44,7 @@ Serving WSGI Application
 
 If you have a WSGI application at `hello.py`:
 
+.. code-block:: python
     def demoapp(env, start_response):
         start_response('200 OK', [('Content-type', 'text/plain')])
         return ['hello, world']
@@ -57,11 +58,12 @@ Full Usage
 ----------
 
     ------------------------------------------------------------------------------
-    usage: pwserver [-h || --help] [static [-f PATH]] [-w MODULE_PATH:APP] 
+    usage: pwserver [-h || --help] [static [-f PATH]] [-w MODULE_PATH:APP [-a ADDRESS]] 
 
     -h                  :  Show usage and return (also --help).
 
     static [-f PATH]    : serving as a static file server. PATH is Your config file path, default /etc/pwserver.conf
 
     -w                  : serving as a WSGI server. MODULE_PATH: Your module which contains a WSGI application. APP: Your WSGI application name.
+    -a                  : ADDRESS: WSGI server address.
     ------------------------------------------------------------------------------
