@@ -12,16 +12,13 @@ DEFAULT_CONFIG_FILE = '/etc/pwserver.conf'
 
 USEAGE = """
 ------------------------------------------------------------------------------
-usage: pwserver [static [-f PATH]] [-w MODULE_PATH:APP]
+usage: pwserver [-h || --help] [static [-f PATH]] [-w MODULE_PATH:APP] 
 
-PATH: Your config file path, default /etc/pwserver.conf
+-h                  :  Show usage and return (also --help).
 
-MODULE_PATH: Your module which contains a WSGI application sample: 
-    'django.wsgi'
-    '../django.wsgi'
-    '/user/code/myproject/'
+static [-f PATH]    : serving as a static file server. PATH is Your config file path, default /etc/pwserver.conf
 
-APP: Your WSGI application name.
+-w                  : serving as a WSGI server. MODULE_PATH: Your module which contains a WSGI application. APP: Your WSGI application name.
 ------------------------------------------------------------------------------
 """
 
@@ -78,9 +75,17 @@ def find_after_arg(argv, arg, argname):
     show_useage()
     print 'you use the %s arg, but not provide the %s path' % (arg, argname)
 
+
 def run():
     argv = sys.argv
     alen = len(argv)
+    if alen == 1:
+        show_useage()
+
+    if '-h' in argv or '--help' in argv:
+        show_useage()
+        return
+
     if 'static' in argv:
         cfgfile = DEFAULT_CONFIG_FILE
         sidx = argv.index('static')
@@ -95,12 +100,14 @@ def run():
             launch(cfg_file=cfgfile)
         else:
             print 'config not found: %s' % cfgfile
-    if '-w' in argv:
+    elif '-w' in argv:
         res = find_after_arg(argv, '-w', 'WSGI application')
         if res:
             launch(address=('', 8180), wsgiapp=res)
         else:
             return
+    else:
+        show_useage()
 
 if __name__ == '__main__':
     run()

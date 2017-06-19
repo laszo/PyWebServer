@@ -5,6 +5,7 @@ pwserver/__init__.py
 pwserver/framework.py
 pwserver/handler.py
 pwserver/launch.py
+pwserver/mime.types
 pwserver/pwservercmd.py
 pwserver/server.py
 pwserver/tools.py

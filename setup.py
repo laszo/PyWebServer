@@ -7,13 +7,15 @@ setup(
     author_email="lasologo@gmail.com",
     license='MIT',
     keywords='wsgi server framework',
-    description='PyWebServer is a full Web application stack, \
-        including HTTP server,WSGI server and Web framework.',
+    description='PyWebServer is a full Web application stack, including HTTP server,WSGI server and Web framework.',
     packages=['pwserver'],
+    package_data={
+        'pwserver': ['mime.types'],
+    },
     install_requires=[],
     entry_points={
         'console_scripts': [
-            'pwserver=launch:run',
+            'pwserver=pwserver.launch:run',
         ],
     },
 )
