@@ -1,17 +1,22 @@
-# PyWebServer
-aim to build a 'real' web server from the very beginning in python
+PyWebServer
+===========
 
-## Installation
+Aim to build a 'real' web server from the very beginning in python
+
+Installation
+------------
 
 PyWebServer requires Python 2.x >= 2.6.
 
-Install from archive file(It hasn't been uploaded to PyPI yet):
+Install from archive file (it hasn't been uploaded to PyPI yet):
 
     $ pip install https://github.com/laszo/PyWebServer/archive/v0.1.zip
 
-## Usage
+Usage
+-----
 
-### Serving static files:
+Serving static files:
+---------------------
 
     $ pwserver static [-f PATH]
 
@@ -34,11 +39,11 @@ Configuration file format is [nginx like](http://nginx.org/en/docs/beginners_gui
 
 Default config file is at `/etc/pwserver.conf`. 
 
-#### Serving WSGI Application
+Serving WSGI Application
+------------------------
 
 If you have a WSGI application at `hello.py`:
 
-    :::python
     def demoapp(env, start_response):
         start_response('200 OK', [('Content-type', 'text/plain')])
         return ['hello, world']
@@ -48,7 +53,8 @@ You can serving it by:
     $ pwserver -w hello:demoapp
 
 
-## Full Usage
+Full Usage
+----------
 
     ------------------------------------------------------------------------------
     usage: pwserver [-h || --help] [static [-f PATH]] [-w MODULE_PATH:APP] 
