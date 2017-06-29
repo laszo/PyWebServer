@@ -1,7 +1,7 @@
 from distutils.core import setup
 setup(
     name='pwserver',
-    version='0.1',
+    version='0.1a1',
     url="https://github.com/laszo/PyWebServer/",
     author="laszo",
     author_email="lasologo@gmail.com",
