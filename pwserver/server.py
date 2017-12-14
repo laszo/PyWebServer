@@ -1,14 +1,14 @@
 # --encoding:utf-8--
-import socket
 import select
+import socket
+
 import os
-import handler
-import threading
-import tools as t
+
+import pwserver.tools as t
+from pwserver import handler
 
 
 class BaseServer(object):
-
     MAX_READS = 65537
 
     def __init__(self, address=None):
@@ -26,9 +26,9 @@ class BaseServer(object):
             host, port = self.socket.getsockname()[:2]
             self.server_name = socket.getfqdn(host)
             self.server_port = port
-            print 'Server listen at %s:%s' % (self.server_name, str(self.server_port))
+            print('Server listen at %s:%s' % (self.server_name, str(self.server_port)))
         except socket.error as err:
-            print 'Server Error:' + err.message
+            # print('Server Error: %s' % err.args)
             self.colse_server()
             return
 
@@ -39,12 +39,12 @@ class BaseServer(object):
             self.colse_server()
 
     def waiting_request(self):
-        print 'Waiting request...'
+        print('Waiting request...')
         while True:
             rdl, wrl, erl = select.select([self.socket], [], [])
             for req in rdl:
                 conn, add = req.accept()
-                print 'Request from :%s:%d' % add
+                print('Request from :%s:%d' % (add[0], add[1]))
                 try:
                     self.handle_request(conn)
                 except socket.error:
@@ -54,7 +54,7 @@ class BaseServer(object):
         raise NotImplementedError
 
     def colse_server(self):
-        print 'Server is about to close...'
+        print('Server is about to close...')
         self.socket.close()
 
 
@@ -74,12 +74,12 @@ class ConfigServer(BaseServer):
             t.error('no port given')
         port = listens[0].replace(';', '').split()[1]
         self.address = ('', int(port))
-        print 'server port:%s' % port
+        print('server port:%s' % port)
 
         names = [i for i in config.find('server_name')]
         if names:
             self.server_name = names[0]
-            print self.server_name
+            print(self.server_name)
 
         for loc in config.find('location'):
             if loc.args:
@@ -115,10 +115,12 @@ class WSGIServer(BaseServer):
         hdler = self.handlercls(request, self.wsgiapp, self.base_environ.copy())
         hdler.handle()
 
+
 class _TestServer(BaseServer):
     def handle_request(self, request):
         hdler = handler.VeryBaseHandler(request)
         hdler.handle()
+
 
 if __name__ == '__main__':
     tser = _TestServer(('', 8980))

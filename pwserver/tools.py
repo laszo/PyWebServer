@@ -1,14 +1,12 @@
 #! --encoding:utf8--
 
+from io import StringIO
 import os
-import StringIO
 
 DEFAULT_ROOT = '/usr/local/var/www/'
 if os.name == 'nt':
     DEFAULT_ROOT = 'C:\\nginx-1.13.0\\html'
 PASS_ARGS = ['proxy_pass', 'fastcgi_pass', 'uwsgi_pass', 'scgi_pass', 'memcached_pass']
-
-import SimpleHTTPServer
 
 RESP404 = """HTTP/1.0 404 Not Found
 
@@ -58,7 +56,7 @@ class block(object):
             if self.last_block:
                 self.last_block.push(line)
             else:
-                self.last_block = block(line=line, prefix=self.prefix+'\t')
+                self.last_block = block(line=line, prefix=self.prefix + '\t')
                 self.blocks.append(self.last_block)
         elif line.endswith('}'):
             if self.last_block:
@@ -69,9 +67,9 @@ class block(object):
                 self._open = False
 
     def printfoo(self, f):
-        print >>f, self.prefix + self.name
+        print >> f, self.prefix + self.name
         for i in self.directives:
-            print >>f, self.prefix + '\t' + i
+            print >> f, self.prefix + '\t' + i
         for i in self.blocks:
             i.printfoo(f)
         return f.getvalue()
@@ -110,6 +108,7 @@ class block(object):
         bufr.close()
         return content
 
+
 class config(object):
     def __init__(self, cfg_file):
         self.cfg_file = cfg_file
@@ -123,6 +122,7 @@ class config(object):
             res.append(i)
         return res
 
+
 def init_mime_types(fpath):
     tmimes = dict()
     for line in open(fpath, 'rt'):
@@ -134,13 +134,16 @@ def init_mime_types(fpath):
             tmimes[word] = words[0]
     return tmimes
 
-PWD =  os.path.split(os.path.realpath(__file__))[0]
+
+PWD = os.path.split(os.path.realpath(__file__))[0]
 mimes = init_mime_types(os.path.join(PWD, 'mime.types'))
+
 
 def get_mime_type(mtype):
     if mimes.has_key(mtype):
         return mimes[mtype]
     return 'application/octet-stream'
+
 
 def read_lines(fn):
     f = open(fn, 'rt')
@@ -158,8 +161,9 @@ def read_lines(fn):
 
 
 def error(msg):
-    print 'Error: %s' % msg
+    print('Error: %s' % msg)
     raise Exception
+
 
 def parser(line):
     if line:

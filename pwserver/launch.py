@@ -1,12 +1,13 @@
 #!/usr/bin/python
-import importlib
 import multiprocessing
-import os
 import sys
 import threading
 
-import tools as t
-from server import ConfigServer, WSGIServer
+import importlib
+import os
+
+import pwserver.tools as t
+from pwserver.server import ConfigServer, WSGIServer
 
 DEFAULT_CONFIG_FILE = '/etc/pwserver.conf'
 DEFAULT_WSGI_ADDRESS = ('', 8180)
@@ -24,29 +25,38 @@ static [-f PATH]    : serving as a static file server. PATH is Your config file 
 ------------------------------------------------------------------------------
 """
 
+
 def show_useage():
-    print USEAGE
+    print(USEAGE)
+
 
 def launch(address=None, wsgiapp=None, cfg_file=None):
     if cfg_file:
         config = t.config(cfg_file)
         servers = config.find('http.server')
         for server in servers:
-            worker = multiprocessing.Process(target=runserver, args=(server, ))
+            worker = multiprocessing.Process(target=runserver, args=(server,))
             worker.start()
     if wsgiapp:
         if not address:
             address = DEFAULT_WSGI_ADDRESS
         # runwsgi(address, wsgiapp)
-        worker = threading.Thread(target=runwsgi, args=(address, wsgiapp, ))
+        worker = threading.Thread(target=runwsgi, args=(address, wsgiapp,))
         worker.start()
+
 
 def runserver(config):
     server = ConfigServer(config=config)
     server.run_server()
 
+
+from pwserver.framework import application
+
+
 def findapp(apppath):
     try:
+        if isinstance(apppath, application):
+            return apppath
         parts = apppath.split(":", 1)
         if len(parts) == 1:
             module, obj = apppath, "application"
@@ -66,18 +76,20 @@ def findapp(apppath):
         msg = "Failed to find application."
         raise
 
+
 def runwsgi(address, wsgiapp):
     app = findapp(wsgiapp)
     server = WSGIServer(address, app)
     server.run_server()
 
+
 def find_after_arg(argv, arg, argname):
     sidx = argv.index(arg)
     alen = len(argv)
     if alen > sidx + 1:
-        return argv[sidx+1]
+        return argv[sidx + 1]
     show_useage()
-    print 'you use the %s arg, but not provide the %s path' % (arg, argname)
+    print('you use the %s arg, but not provide the %s path' % (arg, argname))
 
 
 def run():
@@ -94,7 +106,7 @@ def run():
         cfgfile = DEFAULT_CONFIG_FILE
         sidx = argv.index('static')
         if alen > sidx + 1:
-            if argv[sidx+1] == '-f':
+            if argv[sidx + 1] == '-f':
                 res = find_after_arg(argv, '-f', 'config file')
                 if res:
                     cfgfile = res
@@ -103,7 +115,8 @@ def run():
         if os.path.exists(cfgfile):
             launch(cfg_file=cfgfile)
         else:
-            print 'config not found: %s' % cfgfile
+            print
+            'config not found: %s' % cfgfile
     elif '-w' in argv:
         res = find_after_arg(argv, '-w', 'WSGI application')
         if res:
@@ -118,6 +131,7 @@ def run():
             return
     else:
         show_useage()
+
 
 if __name__ == '__main__':
     run()

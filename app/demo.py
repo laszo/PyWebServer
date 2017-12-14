@@ -1,4 +1,6 @@
-from pwsmodule import pwserver as pw
+from app.pwsmodule import application
+from pwserver import launch
+
 
 def hello1(context):
     if context and isinstance(context, dict):
@@ -14,8 +16,8 @@ def hello1(context):
 def hello2(context):
     args = context['args']
     kwarg = context['kwarg']
-    print args
-    print kwarg
+    print(args)
+    print(kwarg)
     return 'hello2'
 
 
@@ -25,11 +27,12 @@ def pwapp():
         ('/hello2', hello2),
         (r'/hello2\?name=\w+&age=\s+', hello2),
         ('/', hello1),
-        ]
-    app = pw.application(urls)
+    ]
+    app = application(urls)
     return app
+
 
 wsgi_app = pwapp()
 
 if __name__ == '__main__':
-    pw.launch(wsgiapp=wsgi_app)
+    launch(wsgiapp=wsgi_app)

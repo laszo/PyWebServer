@@ -15,4 +15,4 @@ def pwpath():
 
 sys.path.append(pwpath())
 
-import pwserver
+from pwserver.framework import application

@@ -1,10 +1,13 @@
-import sys
 import socket
-import shutil
+import sys
+
 import os.path
-import tools as t
+import shutil
+
+import pwserver.tools as t
 
 MAX_READS = 65537
+
 
 class VeryBaseHandler(object):
     def __init__(self, request):
@@ -47,9 +50,12 @@ class BaseHandler(object):
         return self.paser_request()
 
     def paser_request(self):
-        lines = self.raw_request.split('\r\n')
+        raw = self.raw_request
+        if isinstance(self.raw_request, bytes):
+            raw = self.raw_request.decode()
+        lines = raw.split('\r\n')
         first = lines[0]
-        print 'Request: %s' % first
+        print('Request: %s' % first)
         words = first.split()
         if len(words) > 1:
             self.request_method = words[0]
@@ -63,7 +69,7 @@ class BaseHandler(object):
                 self.request_path, self.request_string = self.request_path.split('?', 1)
             else:
                 self.request_string = ''
-        print '%s %s' % (self.request_method, self.request_path)
+        print('%s %s' % (self.request_method, self.request_path))
         return True
 
     def handle_requst(self):
@@ -85,7 +91,7 @@ class BaseHandler(object):
         self._write("\r\n")
 
     def _write(self, data):
-        self.wfile.write(data)
+        self.wfile.write(data.encode())
 
     def flush(self):
         self.wfile.flush()
@@ -121,15 +127,15 @@ class ConfigFileHandler(BaseHandler):
                 for pasarg in t.PASS_ARGS:
                     targ = t.parser(location.subd(pasarg))
                     if targ:
-                        print '%s: %s' % (pasarg, targ)
+                        print('%s: %s' % (pasarg, targ))
         self.send_error()
 
     def send_file(self, fpath):
         if not os.path.exists(fpath):
-            print 'not found: ', fpath
+            print('not found: ', fpath)
             self.send_error()
             return
-        print 'sending: ', fpath
+        print('sending: ', fpath)
 
         tfile = open(fpath)
 
